@@ -216,7 +216,7 @@ export default function App() {
             </p>
             <button 
               onClick={startGame}
-              className="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 flex justify-center items-center gap-2"
+              className="margin-hack w-full py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 flex justify-center items-center gap-2"
             >
               <Play size={20} /> Let's Begin, Shall We?
             </button>
