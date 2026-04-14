@@ -126,26 +126,54 @@ export default function App() {
       playTone(880, now); // A5
       playTone(1108.73, now + 0.15); // C#6
     } else {
-      // Sad Trombone sound
+      // Sad Trombone sound - Enhanced for realism with wah-wah and vibrato
       const notes = [311.13, 293.66, 277.18, 261.63]; // Eb4, D4, Db4, C4
       notes.forEach((freq, i) => {
         const osc = audioContext.createOscillator();
         const gain = audioContext.createGain();
-        osc.connect(gain);
+        const filter = audioContext.createBiquadFilter();
+        
+        osc.connect(filter);
+        filter.connect(gain);
         gain.connect(audioContext.destination);
+        
         osc.type = 'sawtooth';
         
-        const startTime = now + i * 0.4;
-        const duration = i === notes.length - 1 ? 1.0 : 0.4;
+        const startTime = now + i * 0.45; // Slightly slower pacing
+        const duration = i === notes.length - 1 ? 1.5 : 0.4; // Longer final note
         
+        // Wah-wah mute effect using a lowpass filter envelope
+        filter.type = 'lowpass';
+        filter.Q.value = 5; // Adds a bit of resonance to the brass sound
+        filter.frequency.setValueAtTime(200, startTime);
+        filter.frequency.exponentialRampToValueAtTime(1200, startTime + 0.1);
+        filter.frequency.exponentialRampToValueAtTime(200, startTime + duration);
+
         osc.frequency.setValueAtTime(freq, startTime);
+
         if (i === notes.length - 1) {
-          // Pitch slide down on the final note
-          osc.frequency.exponentialRampToValueAtTime(freq * 0.7, startTime + duration);
+          // Pitch slide down heavily on the final note
+          osc.frequency.exponentialRampToValueAtTime(freq * 0.6, startTime + duration);
+          
+          // Add vibrato to the final note using an LFO
+          const lfo = audioContext.createOscillator();
+          const lfoGain = audioContext.createGain();
+          lfo.type = 'sine';
+          lfo.frequency.value = 5; // 5 Hz vibrato rate (speed)
+          lfoGain.gain.value = 15; // Vibrato depth (how much the pitch bends)
+          
+          lfo.connect(lfoGain);
+          lfoGain.connect(osc.frequency);
+          lfo.start(startTime);
+          lfo.stop(startTime + duration);
+        } else {
+          // Slight pitch bend for intermediate notes
+          osc.frequency.exponentialRampToValueAtTime(freq * 0.95, startTime + duration);
         }
         
+        // Volume envelope
         gain.gain.setValueAtTime(0, startTime);
-        gain.gain.linearRampToValueAtTime(0.3, startTime + 0.05);
+        gain.gain.linearRampToValueAtTime(0.4, startTime + 0.05);
         gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration - 0.05);
         
         osc.start(startTime);
@@ -178,6 +206,18 @@ export default function App() {
       setGameState('end');
     }
   };
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if (e.key === 'Enter' && gameState === 'feedback') {
+        e.preventDefault();
+        handleNextWord();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [gameState, currentIndex, words]);
 
   const getSummary = () => {
     return SUMMARIES.find(s => score <= s.max)?.text || "You broke the system. Jolly good show!";
